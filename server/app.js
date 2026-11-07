@@ -1,3 +1,4 @@
+require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const compression = require('compression');
@@ -8,6 +9,8 @@ const expressHandlebars = require('express-handlebars');
 //us to obscure info from malicious attacks
 const helmet = require('helmet');
 const session = require('express-session');
+const RedisStore = require('connect-redis').RedisStore;
+const redis = require('redis');
 
 const router = require('./router.js');
 
