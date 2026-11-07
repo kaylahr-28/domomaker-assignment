@@ -24,41 +24,59 @@ mongoose.connect(dbURI).catch((err) => {
     }
 });
 
-const app = express();
-
-app.use(helmet());
-app.use('/assets', express.static(path.resolve(`${__dirname}/../hosted`)));
-app.use(favicon(`${__dirname}/../hosted/img/favicon.png`));
-app.use(compression());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-// takes several configuration options as JSON object
-// Once configured, session module will add a session obj to every
-// request object, accessed by saying “req.session”. This session object
-// can be used to track/store info unique to that user btwn requests
-app.use(session({
-    key: 'sessionid',
-    // private string used as seed for hashing/creating unique session
-    // keys. makes it so ur unique session keys r diff frm other servers
-    // using express. can be changed to anything you want, but will invalidate
-    // existing session ids (isn’t necessarily huge issue)
-    secret: 'Domo Arigato',
-    //only send session key back to database if it changes
-    resave: false,
-    // prevents us from saving uninitialized sessionids to database
-    saveUninitialized: false,
-}));
-//key is name of cookie so it can be tracked in requests
-//when browser sends requests, cookies will come too
-
-app.engine('handlebars', expressHandlebars.engine({ defaultLayout: '' }));
-app.set('view engine', 'handlebars');
-app.set('views', `${__dirname}/../views`);
-
-router(app);
-
-app.listen(port, (err) => {
-    if (err) { throw err; }
-    console.log(`Listening on port ${port}`);
+const redisClient = redis.createClient({
+    url: process.env.REDISCLOUD_URL,
 });
+redisClient.on('error', err => console.log('Redis Client Error', err));
+
+redisClient.connect().then(() => {
+
+    const app = express();
+
+    app.use(helmet());
+    app.use('/assets', express.static(path.resolve(`${__dirname}/../hosted`)));
+    app.use(favicon(`${__dirname}/../hosted/img/favicon.png`));
+    app.use(compression());
+    app.use(express.urlencoded({ extended: true }));
+    app.use(express.json());
+
+    // takes several configuration options as JSON object
+    // Once configured, session module will add a session obj to every
+    // request object, accessed by saying “req.session”. This session object
+    // can be used to track/store info unique to that user btwn requests
+    app.use(session({
+        key: 'sessionid',
+        // private string used as seed for hashing/creating unique session
+        // keys. makes it so ur unique session keys r diff frm other servers
+        // using express. can be changed to anything you want, but will invalidate
+        // existing session ids (isn’t necessarily huge issue)
+        secret: 'Domo Arigato',
+        //only send session key back to database if it changes
+        resave: false,
+        // prevents us from saving uninitialized sessionids to database
+        saveUninitialized: false,
+    }));
+    //key is name of cookie so it can be tracked in requests
+    //when browser sends requests, cookies will come too
+
+    app.engine('handlebars', expressHandlebars.engine({ defaultLayout: '' }));
+    app.set('view engine', 'handlebars');
+    app.set('views', `${__dirname}/../views`);
+
+    router(app);
+
+    app.listen(port, (err) => {
+        if (err) { throw err; }
+        console.log(`Listening on port ${port}`);
+    });
+
+    app.use(session({
+        key: 'sessionid',
+        store: new RedisStore({
+            client: redisClient,
+        }),
+        secret: 'Domo Arigato',
+        resave: false,
+        saveUninitialized: false,
+    }));
+})
