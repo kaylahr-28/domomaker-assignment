@@ -51,6 +51,9 @@ redisClient.connect().then(() => {
         // using express. can be changed to anything you want, but will invalidate
         // existing session ids (isn’t necessarily huge issue)
         secret: 'Domo Arigato',
+        store: new RedisStore({
+            client: redisClient,
+        }),
         //only send session key back to database if it changes
         resave: false,
         // prevents us from saving uninitialized sessionids to database
@@ -69,14 +72,4 @@ redisClient.connect().then(() => {
         if (err) { throw err; }
         console.log(`Listening on port ${port}`);
     });
-
-    app.use(session({
-        key: 'sessionid',
-        store: new RedisStore({
-            client: redisClient,
-        }),
-        secret: 'Domo Arigato',
-        resave: false,
-        saveUninitialized: false,
-    }));
 })
